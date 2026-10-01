@@ -1,0 +1,200 @@
+using System;
+using System.Drawing;
+using System.Drawing.Text;
+using System.IO;
+using System.Windows.Forms;
+
+namespace Bai5
+{
+    public partial class Form1 : Form
+    {
+        private string currentFilePath = string.Empty;
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        // --- KHỞI TẠO DỮ LIỆU BAN ĐẦU ---
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            // 1. Nạp danh sách tất cả Font chữ của hệ thống
+            using (InstalledFontCollection installedFonts = new InstalledFontCollection())
+            {
+                foreach (FontFamily font in installedFonts.Families)
+                {
+                    cmbFonts.Items.Add(font.Name);
+                }
+            }
+
+            // 2. Nạp kích thước chữ (8 -> 72)
+            int[] sizes = { 8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72 };
+            foreach (int size in sizes)
+            {
+                cmbSizes.Items.Add(size.ToString());
+            }
+
+            // 3. Đặt mặc định Font Tahoma, Size 14[cite: 3]
+            ResetToDefaultFont();
+            UpdateWordCount();
+        }
+
+        private void ResetToDefaultFont()
+        {
+            cmbFonts.SelectedItem = "Tahoma";
+            cmbSizes.SelectedItem = "14";
+            richTextBox1.Font = new Font("Tahoma", 14, FontStyle.Regular);
+        }
+
+        // --- TẠO VĂN BẢN MỚI ---
+        private void CreateNewDocument()
+        {
+            richTextBox1.Clear();
+            ResetToDefaultFont();
+            currentFilePath = string.Empty;
+            UpdateWordCount();
+        }
+
+        private void menuTaoMoi_Click(object sender, EventArgs e) => CreateNewDocument();
+        private void btnNew_Click(object sender, EventArgs e) => CreateNewDocument();
+
+        // --- MỞ TẬP TIN ---
+        private void OpenFile()
+        {
+            using OpenFileDialog openDlg = new OpenFileDialog();
+            openDlg.Filter = "Text Files (*.txt)|*.txt|Rich Text Format (*.rtf)|*.rtf";
+
+            if (openDlg.ShowDialog() == DialogResult.OK)
+            {
+                currentFilePath = openDlg.FileName;
+                string extension = Path.GetExtension(currentFilePath).ToLower();
+
+                if (extension == ".rtf")
+                {
+                    richTextBox1.LoadFile(currentFilePath, RichTextBoxStreamType.RichText);
+                }
+                else
+                {
+                    richTextBox1.LoadFile(currentFilePath, RichTextBoxStreamType.PlainText);
+                }
+                UpdateWordCount();
+            }
+        }
+
+        private void menuMoTapTin_Click(object sender, EventArgs e) => OpenFile();
+
+        // --- LƯU NỘI DUNG VĂN BẢN ---
+        private void SaveFile()
+        {
+            if (string.IsNullOrEmpty(currentFilePath))
+            {
+                using SaveFileDialog saveDlg = new SaveFileDialog();
+
+saveDlg.Filter = "Rich Text Format (*.rtf)|*.rtf";
+                saveDlg.DefaultExt = "rtf";
+
+                if (saveDlg.ShowDialog() == DialogResult.OK)
+                {
+                    currentFilePath = saveDlg.FileName;
+                    richTextBox1.SaveFile(currentFilePath, RichTextBoxStreamType.RichText);
+                    MessageBox.Show("Lưu văn bản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+                richTextBox1.SaveFile(currentFilePath, RichTextBoxStreamType.RichText);
+                MessageBox.Show("Lưu văn bản thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void menuLuu_Click(object sender, EventArgs e) => SaveFile();
+        private void btnSave_Click(object sender, EventArgs e) => SaveFile();
+
+        // --- THOÁT ---
+        private void menuThoat_Click(object sender, EventArgs e) => Application.Exit();
+
+        // --- ĐỊNH DẠNG FONTDIALOG ---
+        private void menuDinhDang_Click(object sender, EventArgs e)
+        {
+            using FontDialog fontDlg = new FontDialog();
+            fontDlg.ShowColor = true;
+            fontDlg.ShowApply = true;
+            fontDlg.ShowEffects = true;
+            fontDlg.ShowHelp = true;
+
+            if (fontDlg.ShowDialog() != DialogResult.Cancel)
+            {
+                richTextBox1.SelectionColor = fontDlg.Color;
+                richTextBox1.SelectionFont = fontDlg.Font;
+            }
+        }
+
+        // --- THAY ĐỔI FONT VÀ SIZE TRÊN TOOLSTRIP ---
+        private void cmbFonts_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbFonts.SelectedItem != null && richTextBox1.SelectionFont != null)
+            {
+                string fontName = cmbFonts.SelectedItem.ToString()!;
+                float fontSize = richTextBox1.SelectionFont.Size;
+                FontStyle fontStyle = richTextBox1.SelectionFont.Style;
+
+                richTextBox1.SelectionFont = new Font(fontName, fontSize, fontStyle);
+            }
+        }
+
+        private void cmbSizes_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbSizes.SelectedItem != null && richTextBox1.SelectionFont != null)
+            {
+                if (float.TryParse(cmbSizes.SelectedItem.ToString(), out float fontSize))
+                {
+                    string fontName = richTextBox1.SelectionFont.Name;
+                    FontStyle fontStyle = richTextBox1.SelectionFont.Style;
+
+                    richTextBox1.SelectionFont = new Font(fontName, fontSize, fontStyle);
+                }
+            }
+        }
+
+        // --- ĐỊNH DẠNG BOLD, ITALIC, UNDERLINE ---
+        private void ToggleFontStyle(FontStyle style)
+        {
+            if (richTextBox1.SelectionFont != null)
+            {
+Font currentFont = richTextBox1.SelectionFont;
+                FontStyle newStyle = currentFont.Style ^ style;
+
+                richTextBox1.SelectionFont = new Font(currentFont.FontFamily, currentFont.Size, newStyle);
+            }
+        }
+
+        private void btnBold_Click(object sender, EventArgs e) => ToggleFontStyle(FontStyle.Bold);
+        private void btnItalic_Click(object sender, EventArgs e) => ToggleFontStyle(FontStyle.Italic);
+        private void btnUnderline_Click(object sender, EventArgs e) => ToggleFontStyle(FontStyle.Underline);
+
+        // --- ĐẾM SỐ TỪ VÀ CẬP NHẬT THANH TRẠNG THÁI ---
+        private void UpdateWordCount()
+        {
+            string text = richTextBox1.Text.Trim();
+            if (string.IsNullOrEmpty(text))
+            {
+                lblStatus.Text = "Tổng số từ: 0";
+            }
+            else
+            {
+                string[] words = text.Split(new char[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+                lblStatus.Text = $"Tổng số từ: {words.Length}";
+            }
+        }
+
+        private void richTextBox1_TextChanged(object sender, EventArgs e)
+        {
+            UpdateWordCount();
+        }
+
+        private void statusStrip1_TextChanged(object sender, EventArgs e)
+        {
+            // Không cần xử lý ở đây
+        }
+    }
+}
